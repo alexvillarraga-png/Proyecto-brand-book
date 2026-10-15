@@ -1,5 +1,5 @@
 /* =========================================================
-   LA MOVIDA · Brand Book interactivo
+   LA MOVIDA · Manual de marca interactivo
    Los trazos del logotipo, isotipo e íconos se extrajeron
    directamente del PDF original (assets/brand.js).
    ========================================================= */
@@ -244,10 +244,10 @@
 
   /* ---------- ICONOGRAFÍA ---------- */
   $('#icons').innerHTML = B.icons.map(ic => `
-    <button class="ico" data-reveal type="button" aria-label="Ícono ${ic.name}">
-      <div class="ico__tile draw" style="--bg:${ic.bg};--c:${ic.color}">${iconSVG(ic)}</div>
+    <a class="ico" data-reveal href="assets/icons/${ic.slug}.svg" download="la-movida-${ic.slug}.svg" aria-label="Descargar ícono ${ic.name} (SVG)">
+      <div class="ico__tile draw" style="--bg:${ic.bg}">${iconSVG(ic)}</div>
       <span>${ic.name}</span>
-    </button>`).join('');
+    </a>`).join('');
   $('#constructIcon').innerHTML = iconSVG(iconMap.cuidado);
   $('#constructIcon').classList.add('draw');
 
@@ -265,7 +265,7 @@
     const v = VERS[i];
     $$('#verTabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.v == i));
     $('#verName').textContent = v.n; $('#verDesc').textContent = v.d;
-    $$('#verDots i').forEach((d, k) => d.classList.toggle('is-on', k === i));
+    const dl = $('#verDl'); dl.href = 'assets/' + v.f; dl.setAttribute('download', 'la-movida-' + v.f);
     verStage.style.backgroundColor = v.bg;
     const prev = $(`.v[data-i="${curV}"]`, verStage), next = $(`.v[data-i="${i}"]`, verStage);
     if (!hasGsap || RM || !animate) {
@@ -279,25 +279,13 @@
     }
     curV = i;
   }
-  let verAuto = null;
-  const stopAuto = () => { clearInterval(verAuto); verAuto = null; };
-  $$('#verTabs button').forEach(b => b.addEventListener('click', () => { stopAuto(); setVersion(+b.dataset.v); }));
+  $$('#verTabs button').forEach(b => b.addEventListener('click', () => setVersion(+b.dataset.v)));
   $('#verTabs').addEventListener('keydown', e => {
     if (!['ArrowRight', 'ArrowLeft'].includes(e.key)) return;
-    stopAuto();
     const n = (curV + (e.key === 'ArrowRight' ? 1 : 3)) % 4;
     setVersion(n); $(`#verTabs [data-v="${n}"]`).focus();
   });
   setVersion(0, false);
-  // recorrido automático mientras la sección está en pantalla
-  if (!RM && 'IntersectionObserver' in window) {
-    let touched = false;
-    $('#versiones').addEventListener('pointerdown', () => { touched = true; stopAuto(); });
-    new IntersectionObserver(([en]) => {
-      if (en.isIntersecting && !touched && !verAuto) verAuto = setInterval(() => setVersion((curV + 1) % 4), 3600);
-      else if (!en.isIntersecting) stopAuto();
-    }, { threshold: .5 }).observe($('#verStage'));
-  }
 
   /* ---------- USOS CORRECTOS ---------- */
   const OK = [
@@ -349,58 +337,6 @@
     if (hasGsap && !RM) gsap.fromTo(s, { y: 0, rotation: 0 }, { keyframes: [{ y: -18, rotation: -10, duration: .25, ease: 'power2.out' }, { y: 0, rotation: 0, duration: .7, ease: 'bounce.out' }], overwrite: true });
   }));
 
-  /* ---------- CINTAS DE MARCA ---------- */
-  const TCOL = ['#00D6A3', '#0897F9', '#ED1B23', '#FFB200'];
-  $$('[data-ticker]').forEach(t => {
-    let k = 0;
-    const phrase = [...t.dataset.ticker].map(ch => ch === ' ' ? '<i class="sp"></i>' :
-      ch === '•' ? `<i class="dot" style="background:${TCOL[(k++) % 4]}"></i>` :
-      `<span style="--c:${TCOL[(k++) % 4]}">${ch}</span>`).join('');
-    const run = `<div class="ticker__run">${phrase} ${phrase} </div>`;
-    t.innerHTML = `<div class="ticker__track">${run}${run}</div>`;
-  });
-
-  /* ---------- PÁGINAS DEL PDF ---------- */
-  const PAGES = ['Portada', 'Contenido', 'Concepto', 'Planimetría', 'Área de protección', 'Paleta de color', 'Colores secundarios', 'Tipografía', 'Iconografía', 'Versiones', 'Usos correctos', 'Usos incorrectos', 'Contraportada'];
-  const pageSrc = i => `assets/pages/p${String(i + 1).padStart(2, '0')}.jpg`;
-  $('#deck').innerHTML = [4, 2, 1, 0].map((p, k) =>
-    `<img class="deck__page deck__page--${k}" src="${pageSrc(p)}" alt="" loading="lazy">`).join('') +
-    `<span class="deck__badge">PDF ↓</span>`;
-  const pagesTrack = $('#pagesTrack');
-  pagesTrack.innerHTML = PAGES.map((n, i) => `
-    <button class="page" type="button" data-p="${i}" aria-label="Ver página ${i + 1}: ${n}">
-      <img src="${pageSrc(i)}" alt="" loading="lazy"><span><b>${String(i + 1).padStart(2, '0')}</b>${n}</span>
-    </button>`).join('');
-  // visor de páginas
-  const lb = $('#lightbox'), lbImg = $('#lbImg'), lbCount = $('#lbCount');
-  let lbI = 0, lbReturn = null;
-  const lbShow = i => {
-    lbI = (i + PAGES.length) % PAGES.length;
-    lbImg.src = pageSrc(lbI); lbImg.alt = `Página ${lbI + 1}: ${PAGES[lbI]}`;
-    lbCount.textContent = `${lbI + 1} / ${PAGES.length} · ${PAGES[lbI]}`;
-  };
-  const lbOpen = i => { lbReturn = document.activeElement; lbShow(i); lb.hidden = false; document.body.classList.add('no-scroll'); $('#lbClose').focus(); };
-  const lbClose = () => { lb.hidden = true; document.body.classList.remove('no-scroll'); if (lbReturn) lbReturn.focus(); };
-  pagesTrack.addEventListener('click', e => { const b = e.target.closest('.page'); if (b) lbOpen(+b.dataset.p); });
-  $('#lbClose').addEventListener('click', lbClose);
-  $('#lbPrev').addEventListener('click', () => lbShow(lbI - 1));
-  $('#lbNext').addEventListener('click', () => lbShow(lbI + 1));
-  lb.addEventListener('click', e => { if (e.target === lb) lbClose(); });
-  addEventListener('keydown', e => {
-    if (lb.hidden) return;
-    if (e.key === 'Escape') lbClose();
-    if (e.key === 'ArrowRight') lbShow(lbI + 1);
-    if (e.key === 'ArrowLeft') lbShow(lbI - 1);
-  });
-
-  /* ---------- Paleta: el ambiente toma el color ---------- */
-  const amb = $('#color');
-  $$('.color', amb).forEach(c => {
-    const on = () => amb.style.setProperty('--amb', c.style.getPropertyValue('--c'));
-    c.addEventListener('pointerenter', on); c.addEventListener('focusin', on);
-  });
-  amb.addEventListener('pointerleave', () => amb.style.removeProperty('--amb'));
-
   /* =========================================================
      ANIMACIONES (GSAP + ScrollTrigger)
      ========================================================= */
@@ -409,7 +345,6 @@
     $$('.draw path').forEach(p => (p.style.strokeDashoffset = 0));
     $$('.ratio__bar span').forEach(s => (s.style.width = s.style.getPropertyValue('--w')));
     $$('.use--bad').forEach(c => c.classList.add('is-wrong'));
-    $$('.sec-head').forEach(h => h.classList.add('is-in'));
     nav.classList.add('is-visible');
     return;
   }
@@ -530,120 +465,6 @@
     duration: 1.3, ease: 'bounce.out', stagger: .08, scrollTrigger: { trigger: '.thanks', start: 'top 75%' },
   });
   gsap.from($$('span', tt), { yPercent: 80, opacity: 0, duration: .8, stagger: .05, ease: 'back.out(2)', scrollTrigger: { trigger: tt, start: 'top 90%' } });
-
-  // Etiquetas: la esquina se dobla al entrar
-  $$('.sec-head').forEach(h => ScrollTrigger.create({ trigger: h, start: 'top 85%', once: true, onEnter: () => h.classList.add('is-in') }));
-
-  // Concepto: el texto se enciende palabra por palabra con el scroll
-  $$('[data-scrub]').forEach(p => {
-    const walk = node => [...node.childNodes].forEach(n => {
-      if (n.nodeType === 3) {
-        const frag = document.createDocumentFragment();
-        n.textContent.split(/(\s+)/).forEach(t => {
-          if (!t) return;
-          if (/^\s+$/.test(t)) frag.appendChild(document.createTextNode(t));
-          else { const sp = document.createElement('span'); sp.className = 'sw-word'; sp.textContent = t; frag.appendChild(sp); }
-        });
-        n.replaceWith(frag);
-      } else if (n.nodeType === 1) walk(n);
-    });
-    walk(p);
-    gsap.fromTo($$('.sw-word', p), { opacity: .16 }, { opacity: 1, stagger: .1, ease: 'none', scrollTrigger: { trigger: p, start: 'top 85%', end: 'bottom 60%', scrub: .4 } });
-  });
-
-  // Cintas: avanzan solas y aceleran con la velocidad del scroll
-  $$('[data-ticker]').forEach(t => {
-    const rev = t.dataset.dir === '-1';
-    const tr = $('.ticker__track', t);
-    const tw = rev
-      ? gsap.fromTo(tr, { xPercent: -50 }, { xPercent: 0, duration: 32, ease: 'none', repeat: -1 })
-      : gsap.to(tr, { xPercent: -50, duration: 32, ease: 'none', repeat: -1 });
-    const letters = $$('span', t);
-    ScrollTrigger.create({
-      trigger: t, start: 'top bottom', end: 'bottom top',
-      onUpdate: st => {
-        const v = st.getVelocity();
-        tw.timeScale(1 + Math.min(Math.abs(v) / 250, 6));
-        gsap.to(tw, { timeScale: 1, duration: 1.4, ease: 'power2.out', overwrite: true });
-        gsap.to(letters, { skewX: gsap.utils.clamp(-16, 16, -v / 110), duration: .3, overwrite: 'auto' });
-        gsap.to(letters, { skewX: 0, duration: .8, delay: .3 });
-      },
-    });
-  });
-
-  // Hero: clic = lluvia de letras del isotipo
-  hero.addEventListener('click', e => {
-    if (e.target.closest('a,button')) return;
-    const r = hero.getBoundingClientRect();
-    for (let i = 0; i < 10; i++) {
-      const l = B.iso[(Math.random() * 8) | 0];
-      const el = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      el.setAttribute('class', 'burst');
-      el.innerHTML = `<path d="${l.d}" fill="${l.fill}"/>`;
-      confetti.appendChild(el);
-      const bb = el.firstChild.getBBox();
-      el.setAttribute('viewBox', `${bb.x} ${bb.y} ${bb.width} ${bb.height}`);
-      const s = rand(22, 54);
-      gsap.set(el, { left: e.clientX - r.left - s / 2, top: e.clientY - r.top - s / 2, width: s, height: s });
-      gsap.timeline({ onComplete: () => el.remove() })
-        .to(el, { x: rand(-280, 280), duration: 1.7, ease: 'power1.out' }, 0)
-        .to(el, { y: -rand(140, 320), duration: .55, ease: 'power2.out' }, 0)
-        .to(el, { y: r.height, duration: 1.15, ease: 'power2.in' }, .55)
-        .to(el, { rotation: rand(-540, 540), duration: 1.7, ease: 'none' }, 0)
-        .to(el, { opacity: 0, duration: .35 }, 1.35);
-    }
-    wraps.slice(0, 4).forEach((g, i) => gsap.fromTo(g, { scale: 1 }, { scale: 1.12, transformOrigin: '50% 50%', duration: .18, yoyo: true, repeat: 1, ease: 'power2.out', delay: i * .05 }));
-    $('.hero__hint').classList.add('is-done');
-  });
-
-  // Concepto: tarjeta con inclinación 3D
-  $$('[data-tilt]').forEach(card => {
-    gsap.set(card, { transformPerspective: 900 });
-    const rx = gsap.quickTo(card, 'rotationX', { duration: .6, ease: 'power3' });
-    const ry = gsap.quickTo(card, 'rotationY', { duration: .6, ease: 'power3' });
-    card.addEventListener('pointermove', e => {
-      const b = card.getBoundingClientRect();
-      ry(((e.clientX - b.left) / b.width - .5) * 12); rx(-((e.clientY - b.top) / b.height - .5) * 12);
-    });
-    card.addEventListener('pointerleave', () => { rx(0); ry(0); });
-  });
-
-  // Íconos: clic para volver a trazar
-  $$('.ico').forEach(a => a.addEventListener('click', () => {
-    gsap.fromTo($$('path', a), { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 1, ease: 'power2.inOut', stagger: .08, overwrite: true });
-    gsap.fromTo($('.ico__tile', a), { scale: .86, rotation: -8 }, { scale: 1, rotation: 0, duration: .9, ease: 'elastic.out(1,.4)' });
-  }));
-
-  // Descargas: el mazo de páginas entra en abanico
-  gsap.from('.deck__page', { y: 90, opacity: 0, duration: 1, stagger: .12, ease: 'back.out(1.6)', scrollTrigger: { trigger: '#deck', start: 'top 80%' } });
-  // Tira de páginas: desplazamiento continuo, pausa al pasar el cursor
-  pagesTrack.innerHTML += pagesTrack.innerHTML;
-  $$('.page', pagesTrack).slice(PAGES.length).forEach(b => { b.setAttribute('aria-hidden', 'true'); b.tabIndex = -1; });
-  pagesTrack.parentElement.classList.add('is-auto');
-  const strip = gsap.to(pagesTrack, { xPercent: -50, duration: 70, ease: 'none', repeat: -1 });
-  pagesTrack.addEventListener('pointerenter', () => gsap.to(strip, { timeScale: 0, duration: .5 }));
-  pagesTrack.addEventListener('pointerleave', () => gsap.to(strip, { timeScale: 1, duration: .5 }));
-  pagesTrack.addEventListener('focusin', () => strip.pause());
-  pagesTrack.addEventListener('focusout', () => strip.resume());
-
-  // Botones magnéticos
-  $$('.btn--big').forEach(b => {
-    const mx = gsap.quickTo(b, 'x', { duration: .5, ease: 'power3' }), my = gsap.quickTo(b, 'y', { duration: .5, ease: 'power3' });
-    b.addEventListener('pointermove', e => { const r = b.getBoundingClientRect(); mx((e.clientX - r.left - r.width / 2) * .3); my((e.clientY - r.top - r.height / 2) * .4); });
-    b.addEventListener('pointerleave', () => { mx(0); my(0); });
-  });
-
-  // Cursor de marca (solo puntero fino)
-  if (matchMedia('(pointer: fine)').matches) {
-    const cur = $('#cursor');
-    document.documentElement.classList.add('has-cursor');
-    const cx = gsap.quickTo(cur, 'x', { duration: .3, ease: 'power3' }), cy = gsap.quickTo(cur, 'y', { duration: .3, ease: 'power3' });
-    let ci = 0;
-    addEventListener('pointermove', e => { cx(e.clientX); cy(e.clientY); cur.classList.add('is-on'); });
-    document.addEventListener('pointerleave', () => cur.classList.remove('is-on'));
-    document.addEventListener('pointerover', e => cur.classList.toggle('is-hover', !!e.target.closest('a,button,input,label,[data-copy],.use--bad,.color')));
-    addEventListener('pointerdown', () => { ci = (ci + 1) % 4; cur.style.setProperty('--cc', TCOL[ci]); });
-  }
 
   addEventListener('load', () => ScrollTrigger.refresh());
 })();
